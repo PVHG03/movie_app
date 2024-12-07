@@ -34,10 +34,10 @@ class Neo4jClient {
     this.driver = neo4j.driver(uri, neo4j.auth.basic(username, password));
   }
 
-  async Node<T extends Node>({
+  async Node({
     label,
     properties = {},
-  }: T): Promise<Record<string, any>> {
+  } : Node): Promise<Record<string, any>> {
     return this.transaction(async (tx: Transaction) => {
       const query = `
         MERGE (n:${label} {id: $properties.id}) 
@@ -112,6 +112,7 @@ class Neo4jClient {
           `Relationship between ${startLabel} with id ${startId} and ${endLabel} with id ${endId} not found.`
         );
       }
+      // return result.records[0].get(0);
     });
   }
 

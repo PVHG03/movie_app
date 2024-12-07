@@ -12,8 +12,7 @@ const catchError =
     try {
       await controller(req, res, next);
     } catch (error: any) {
-      // console.error(error.message);
-      next(error);
+      next(error.message);
     }
   };
 

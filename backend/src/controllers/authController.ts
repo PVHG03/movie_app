@@ -49,9 +49,6 @@ export const register = catchError(async (req, res) => {
 });
 
 export const authCheck = catchError(async (req, res) => {
-
-  console.log("req.userId", req.userId);
-
   return res.status(OK).json({
     success: true,
     user: {

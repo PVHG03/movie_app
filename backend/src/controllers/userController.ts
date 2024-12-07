@@ -1,4 +1,10 @@
-import { BAD_REQUEST, CREATED, NOT_FOUND, OK } from "../constant/http";
+import {
+  BAD_REQUEST,
+  CREATED,
+  INTERNAL_SERVER_ERROR,
+  NOT_FOUND,
+  OK,
+} from "../constant/http";
 import Favorite from "../models/favoriteModel";
 import User from "../models/userModel";
 import { tmdbApi } from "../tmdb/tmdbApi";
@@ -19,9 +25,7 @@ export const getProfile = catchError(async (req, res) => {
 
   return res.status(OK).json({
     success: true,
-    user: {
-      ...user.omitSensitive(),
-    },
+    user: user.omitSensitive(),
   });
 });
 
@@ -44,9 +48,7 @@ export const updateProfile = catchError(async (req, res) => {
 
   return res.status(200).json({
     success: true,
-    user: {
-      ...user.omitSensitive(),
-    },
+    user: user.omitSensitive(),
   });
 });
 
@@ -57,17 +59,15 @@ export const getFavorites = catchError(async (req, res) => {
     "mediaId"
   );
 
-  if (favorites.length === 0) {
-    return res
-      .status(NOT_FOUND)
-      .json({ success: false, message: "No favorites found" });
-  }
+  // if (favorites.length === 0) {
+  //   return res
+  //     .status(NOT_FOUND)
+  //     .json({ success: false, message: "No favorites found" });
+  // }
 
   return res.status(OK).json({
     success: true,
-    favorites: {
-      ...favorites,
-    },
+    favorites,
   });
 });
 
@@ -88,81 +88,83 @@ export const addFavorite = catchError(async (req, res) => {
     });
   }
 
-  const { mediaTitle, mediaGenres } = await tmdbApi
-    .mediaDetail({ mediaId, mediaType })
-    .then((data) => ({
-      mediaTitle: data.original_title,
-      mediaGenres: data.genres,
-    }))
-    .catch((error: any): any => {
-      console.error(error);
-      return res.status(BAD_REQUEST).json({
-        success: false,
-        message: "Failed to add media to favorites",
-      });
+  console.log("mediaId", mediaId);
+  console.log("mediaType", mediaType);
+
+  let mediaData;
+  try {
+    mediaData = await tmdbApi.mediaDetail({ mediaId, mediaType });
+  } catch (error) {
+    return res.status(INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch media details",
     });
+  }
+
+  const { original_title, original_name, backdrop_path, poster_path, genres, title, name } =
+    mediaData;
+
+  const mediaTitle = original_title || original_name || title || name;
 
   const favorite = new Favorite({
     user: currentUser,
     mediaId,
     mediaType,
     title: mediaTitle,
+    backdrop_path: backdrop_path,
+    poster_path: poster_path,
   });
 
+  await favorite.save();
+
   try {
-    await Promise.all([
-      favorite.save(),
+    // Add media node
+    await neo4jClient.Node({
+      label: mediaType === "movie" ? "Movie" : "TVShow",
+      properties: { id: mediaId, name: mediaTitle },
+    });
 
-      neo4jClient.Node({
-        label: mediaType === "movie" ? "Movie" : "TVShow",
-        properties: {
-          id: mediaId,
-          name: mediaTitle,
-        },
-      }),
-
-      ...mediaGenres.map((genre: { id: string; name: string }) =>
-        neo4jClient
-          .Node({
-            label: "Genre",
-            properties: {
-              id: genre.id,
-              name: genre.name,
-            },
-          })
-          .then(() =>
-            neo4jClient.Relationship({
-              startLabel: mediaType === "movie" ? "Movie" : "TVShow",
-              startId: mediaId,
-              endLabel: "Genre",
-              endId: genre.id,
-              relationship: "BELONGS_TO",
+    // Add genre nodes and relationships
+    if (genres?.length) {
+      await Promise.all(
+        genres.map((genre: any) =>
+          neo4jClient
+            .Node({
+              label: "Genre",
+              properties: { id: genre.id, name: genre.name },
             })
-          )
-      ),
+            .then(() =>
+              neo4jClient.Relationship({
+                startLabel: mediaType === "movie" ? "Movie" : "TVShow",
+                startId: mediaId,
+                endLabel: "Genre",
+                endId: genre.id,
+                relationship: "BELONGS_TO",
+              })
+            )
+        )
+      );
+    }
 
-      neo4jClient.Relationship({
-        startLabel: "User",
-        startId: currentUser.toString(),
-        endLabel: mediaType === "movie" ? "Movie" : "TVShow",
-        endId: mediaId,
-        relationship: "FAVORITED",
-      }),
-    ]);
-  } catch (error: any) {
-    console.error(error.message);
-    return res.status(BAD_REQUEST).json({
+    // Add "FAVORITED" relationship
+    await neo4jClient.Relationship({
+      startLabel: "User",
+      startId: currentUser.toString(),
+      endLabel: mediaType === "movie" ? "Movie" : "TVShow",
+      endId: mediaId,
+      relationship: "FAVORITED",
+    });
+  } catch (error) {
+    console.error("Error in Neo4j operations:", error);
+    return res.status(INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: "Failed to add media to favorites",
+      message: "Failed to update relationships in Neo4j",
     });
   }
 
   return res.status(CREATED).json({
     success: true,
-    message: "Media added to favorites",
-    favorite: {
-      ...favorite,
-    },
+    favorite,
   });
 });
 
@@ -179,11 +181,13 @@ export const deleteFavorite = catchError(async (req, res) => {
     });
   }
 
+  console.log("favorite", favorite);
+
   await neo4jClient.deleteRelationship({
     startLabel: "User",
     startId: currentUser.toString(),
     endLabel: favorite.mediaType === "movie" ? "Movie" : "TVShow",
-    endId: favorite.mediaId.toString(),
+    endId: favorite.mediaId,
     relationship: "FAVORITED",
   });
 
@@ -191,6 +195,5 @@ export const deleteFavorite = catchError(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: "Media removed from favorites",
   });
 });

@@ -9,6 +9,7 @@ import { useAuthStore } from "./store/authUser";
 import { useEffect } from "react";
 import { Loader } from "lucide-react";
 import NotFoundPage from "./pages/404";
+import FavoritePage from "./pages/FavoritePage";
 
 export default function App() {
   const { user, isCheckingAuth, authCheck } = useAuthStore() as any;
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/signup" element={!user ? <SignupPage /> : <Navigate to={"/"} />} />
         <Route path="/watch/:id" element={user ? <WatchPage /> : <Navigate to={"/login"} />} />
         <Route path="/search" element={user ? <SearchPage /> : <Navigate to={"/login"} />} />
+        <Route path="/favorite" element={user ? <FavoritePage /> : <Navigate to={"/login"} />} />
         <Route path="/*" element={<NotFoundPage />} />
       </Routes>
       <Toaster />

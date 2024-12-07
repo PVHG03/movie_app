@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Search } from "lucide-react";
+import { Heart, Search } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -8,7 +8,7 @@ import { useContentStore } from "../store/content";
 import { ORIGINAL_IMG_BASE_URL } from "../utils/constant";
 
 const SearchPage = () => {
-  const [activeTab, setActiveTab] = useState("movie");
+	const [activeTab, setActiveTab] = useState("movie");
 	const [searchTerm, setSearchTerm] = useState("");
 
 	const [results, setResults] = useState<Array<{ id: number; poster_path?: string; profile_path?: string; title?: string; name?: string }>>([]);
@@ -40,25 +40,22 @@ const SearchPage = () => {
 			<div className='container mx-auto px-4 py-8'>
 				<div className='flex justify-center gap-3 mb-4'>
 					<button
-						className={`py-2 px-4 rounded ${
-							activeTab === "movie" ? "bg-red-600" : "bg-gray-800"
-						} hover:bg-red-700`}
+						className={`py-2 px-4 rounded ${activeTab === "movie" ? "bg-red-600" : "bg-gray-800"
+							} hover:bg-red-700`}
 						onClick={() => handleTabClick("movie")}
 					>
 						Movies
 					</button>
 					<button
-						className={`py-2 px-4 rounded ${
-							activeTab === "tv" ? "bg-red-600" : "bg-gray-800"
-						} hover:bg-red-700`}
+						className={`py-2 px-4 rounded ${activeTab === "tv" ? "bg-red-600" : "bg-gray-800"
+							} hover:bg-red-700`}
 						onClick={() => handleTabClick("tv")}
 					>
 						TV Shows
 					</button>
 					<button
-						className={`py-2 px-4 rounded ${
-							activeTab === "person" ? "bg-red-600" : "bg-gray-800"
-						} hover:bg-red-700`}
+						className={`py-2 px-4 rounded ${activeTab === "person" ? "bg-red-600" : "bg-gray-800"
+							} hover:bg-red-700`}
 						onClick={() => handleTabClick("person")}
 					>
 						Person

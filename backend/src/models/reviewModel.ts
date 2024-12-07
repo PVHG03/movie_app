@@ -23,7 +23,7 @@ const reviewSchema = new mongoose.Schema(
   modelOptions
 );
 
-reviewSchema.index({ user: 1, mediaId: 1 }, { unique: true });
+reviewSchema.index({ user: 1, mediaId: 1, mediaType: 1 }, { unique: true });
 
 const Review = mongoose.model<IReview>("Review", reviewSchema);
 export default Review;
