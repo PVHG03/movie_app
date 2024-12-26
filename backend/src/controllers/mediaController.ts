@@ -11,15 +11,21 @@ export const getSimilarMedia = catchError(async (req, res) => {
     success: true,
     content: data.results,
   });
-})
+});
+
+export const getRecommendation = catchError(async (req, res) => {
+  const { mediaType } = req.params;
+  
+});
 
 export const getTrending = catchError(async (req, res) => {
-  const { mediaType, time = "day"} = req.params;
+  const { mediaType, time = "day" } = req.params;
   const page = parseInt(<string>req.query.page) || 1;
 
   const data = await tmdbApi.trending({ mediaType, time, page });
 
-  const randonMedia = data.results[Math.floor(Math.random() * data.results.length)];
+  const randonMedia =
+    data.results[Math.floor(Math.random() * data.results.length)];
 
   return res.status(OK).json({
     success: true,

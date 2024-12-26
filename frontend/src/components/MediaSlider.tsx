@@ -62,11 +62,23 @@ export default function MediaSlider({ category }: { category: string }) {
         const resContent = await axios.get(
           `/api/v1/${contentType}/${category}?page=1`
         );
-        const content = resContent.data.content.map((item: any) => ({
-          ...item,
-          isFavorite: false,
-        }));
-        setMedia(content);
+        const content = resContent.data.content;
+
+        const resFavorites = await axios.get(`/api/v1/users/favorites`);
+        const favorites = resFavorites.data.favorites;
+
+        const contentWithFavorites = content.map((item: any) => {
+          const favorite = favorites.find(
+            (favorite: any) =>
+              favorite.mediaId === item.id && favorite.mediaType === contentType
+          );
+          return {
+            ...item,
+            isFavorite: !!favorite,
+            favoriteId: favorite?.id,
+          };
+        });
+        setMedia(contentWithFavorites);
       } catch (error) {
         toast.error("Failed to fetch content");
       }

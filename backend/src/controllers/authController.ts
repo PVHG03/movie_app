@@ -3,6 +3,7 @@ import catchError from "../utils/catchError";
 import { createUser, loginUser } from "../services/authService";
 import { CREATED, OK } from "../constant/http";
 import { setAuthCookies } from "../utils/cookies";
+import User from "../models/userModel";
 
 export const logout = catchError(async (req, res) => {
   res.clearCookie("accessToken");
@@ -49,10 +50,11 @@ export const register = catchError(async (req, res) => {
 });
 
 export const authCheck = catchError(async (req, res) => {
+  
+  const user = await User.findById(req.userId);
+
   return res.status(OK).json({
     success: true,
-    user: {
-      ...req.userId,
-    },
+    user
   });
 });

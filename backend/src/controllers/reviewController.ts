@@ -1,15 +1,24 @@
-import { BAD_REQUEST, NOT_FOUND, OK } from "../constant/http";
+import {
+  BAD_REQUEST,
+  INTERNAL_SERVER_ERROR,
+  NOT_FOUND,
+  OK,
+} from "../constant/http";
 import Review from "../models/reviewModel";
+import User from "../models/userModel";
 import { tmdbApi } from "../tmdb/tmdbApi";
 import catchError from "../utils/catchError";
 import neo4jClient from "../utils/Neo4j";
 
 export const getReviewsOfUser = catchError(async (req, res) => {
-  const currentUser = req.userId;
+  const { mediaId, mediaType } = req.params;
 
-  const reviews = await Review.find({ user: currentUser }).sort({
-    createdAt: -1,
-  });
+  const reviews = await Review.find({
+    mediaId,
+    mediaType,
+  })
+    .populate("user", "username", User)
+    .sort({ createdAt: -1 });
 
   if (!reviews) {
     return res.status(404).json({
@@ -20,30 +29,37 @@ export const getReviewsOfUser = catchError(async (req, res) => {
 
   res.status(OK).json({
     success: true,
-    reviews: {
-      count: reviews.length,
-      data: reviews,
-    },
+    reviews,
   });
 });
 
 export const postReview = catchError(async (req, res) => {
   const currentUser = req.userId;
-  const { mediaId, mediaType, rating, comment } = req.body;
+  const { mediaId, mediaType } = req.params;
+  const { rating, comment } = req.body;
 
-  const { mediaTitle, mediaGenres } = await tmdbApi
-    .mediaDetail({ mediaId, mediaType })
-    .then((data) => ({
-      mediaTitle: data.original_title,
-      mediaGenres: data.genres,
-    }))
-    .catch((error: any): any => {
-      console.error(error);
-      return res.status(BAD_REQUEST).json({
-        success: false,
-        message: "Failed to add media to favorites",
-      });
+  let mediaData;
+  try {
+    mediaData = await tmdbApi.mediaDetail({ mediaId, mediaType });
+  } catch (error) {
+    return res.status(INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch media details",
     });
+  }
+  const username  = await User.findById(currentUser).select("username");
+
+  const {
+    original_title,
+    original_name,
+    backdrop_path,
+    poster_path,
+    genres,
+    title,
+    name,
+  } = mediaData;
+
+  const mediaTitle = original_title || original_name || title || name;
 
   const review = new Review({
     user: currentUser,
@@ -54,51 +70,59 @@ export const postReview = catchError(async (req, res) => {
     comment: comment,
   });
 
+  await review.save();
+
   try {
-    await Promise.all([
-      review.save(),
+    // Add media node
+    await neo4jClient.Node({
+      label: mediaType === "movie" ? "Movie" : "TVShow",
+      properties: { id: mediaId, name: mediaTitle },
+    });
 
-      neo4jClient.Node({
-        label: mediaType === "movie" ? "Movie" : "TVShow",
-        properties: {
-          id: mediaId,
-          name: mediaTitle,
-        },
-      }),
+    // Add genre nodes and relationships
+    if (genres?.length) {
+      await Promise.all(
+        genres.map((genre: any) =>
+          neo4jClient
+            .Node({
+              label: "Genre",
+              properties: { id: genre.id, name: genre.name },
+            })
+            .then(() =>
+              neo4jClient.Relationship({
+                startLabel: mediaType === "movie" ? "Movie" : "TVShow",
+                startId: mediaId,
+                endLabel: "Genre",
+                endId: genre.id,
+                relationship: "BELONGS_TO",
+              })
+            )
+        )
+      );
+    }
 
-      ...mediaGenres.map((genre: { id: string; name: string }) =>
-        neo4jClient.Node({
-          label: "Genre",
-          properties: {
-            id: genre.id,
-            name: genre.name,
-          },
-        })
-      ),
-
-      neo4jClient.Relationship({
-        startLabel: "User",
-        startId: currentUser.toString(),
-        endLabel: mediaType === "movie" ? "Movie" : "TVShow",
-        endId: mediaId,
-        relationship: "REVIEWED",
-        properties: {
-          rating,
-          comment,
-        },
-      }),
-    ]);
-  } catch (error: any) {
-    console.error(error.message);
-    return res.status(BAD_REQUEST).json({
+    await neo4jClient.Relationship({
+      startLabel: "User",
+      startId: currentUser.toString(),
+      endLabel: mediaType === "movie" ? "Movie" : "TVShow",
+      endId: mediaId,
+      relationship: "REVIEWED",
+      properties: {
+        rating,
+      },
+    });
+  } catch (error) {
+    console.error("Error in Neo4j operations:", error);
+    return res.status(INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: "Failed to add review",
+      message: "Failed to update relationships in Neo4j",
     });
   }
 
   return res.status(OK).json({
     success: true,
     review: {
+      username: username?.username,
       rating: review.rating,
       comment: review.comment,
       createdAt: review.createdAt,
@@ -111,7 +135,7 @@ export const updateReview = catchError(async (req, res) => {
   const { id } = req.params;
   const { rating, comment } = req.body;
 
-  const review = await Review.findOne({ _id: id, user: currentUser });
+  const review = await Review.findById(id);
   if (!review) {
     return res.status(NOT_FOUND).json({
       success: false,
@@ -119,8 +143,12 @@ export const updateReview = catchError(async (req, res) => {
     });
   }
 
-  review.rating = rating;
-  review.comment = comment;
+  if (rating) {
+    review.rating = rating;
+  }
+  if (comment) {
+    review.comment = comment;
+  }
 
   await Promise.all([
     review.save(),
@@ -152,7 +180,7 @@ export const deleteReview = catchError(async (req, res) => {
   const currentUser = req.userId;
   const { id } = req.params;
 
-  const review = await Review.findOne({ _id: id, user: currentUser });
+  const review = await Review.findById(id);
   if (!review) {
     return res.status(NOT_FOUND).json({
       success: false,

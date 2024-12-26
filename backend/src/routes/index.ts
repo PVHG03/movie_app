@@ -8,8 +8,8 @@ import reviewRoutes from './reviewRoute';
 const router = Router();
 
 router.use('/auth', authRoutes);
-router.use('/users', userRoutes);
 router.use('/reviews', reviewRoutes);
+router.use('/users', userRoutes);
 router.use('/:mediaType', mediaRoutes);
 
 export default router;

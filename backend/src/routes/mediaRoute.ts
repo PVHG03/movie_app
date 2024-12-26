@@ -6,7 +6,8 @@ import {
   search,
   getGenres,
   getTrending,
-  getSimilarMedia
+  getSimilarMedia,
+  getRecommendation,
 } from "../controllers/mediaController";
 
 const router = Router({
@@ -16,6 +17,7 @@ const router = Router({
 
 router.get("/search", search);
 router.get("/genres", getGenres);
+router.get("/recommendation", getRecommendation);
 
 router.get("/:mediaId/similar", getSimilarMedia);
 router.get("/:mediaId/details", getDetails);
