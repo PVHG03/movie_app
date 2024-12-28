@@ -151,7 +151,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ mediaId, mediaType }) => 
         <div className="space-y-4">
           {reviews.map((review) => (
             <div
-              key={review.id}
+              key={review?.id}
               className="p-4 border border-gray-700 rounded bg-gray-800 text-white"
             >
               <p className="font-bold">{review?.user?.username}</p>
@@ -160,7 +160,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ mediaId, mediaType }) => 
                 {new Date(review.createdAt).toLocaleString()} | Rating: {review?.rating}
               </p>
 
-              {user && user.id === review.user.id && (
+              {user && user?.id === review?.user?.id && (
                 <div className="flex justify-end">
                   <button
                     className="text-blue-500 mt-2 mr-6"

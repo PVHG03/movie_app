@@ -112,7 +112,6 @@ export const postReview = catchError(async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error in Neo4j operations:", error);
     return res.status(INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Failed to update relationships in Neo4j",

@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import ReactPlayer from "react-player";
 import { ORIGINAL_IMG_BASE_URL, SMALL_IMG_BASE_URL } from "../utils/constant";
 import ReviewSection from "../components/ReviewSection";
+import toast from "react-hot-toast";
 
 const WatchPage = () => {
 
@@ -62,25 +63,58 @@ const WatchPage = () => {
 
   useEffect(() => {
     const getMedia = async () => {
+      setIsLoading(true); // Start loading
       try {
-        const res = await axios.get(`/api/v1/${contentType}/${id}/details`);
-        setMedia(res.data.content);
+        const [mediaRes, favoritesRes] = await Promise.all([
+          axios.get(`/api/v1/${contentType}/${id}/details`),
+          axios.get(`/api/v1/users/favorite?mediaId=${id}&mediaType=${contentType}`),
+        ]);
+
+        const mediaData = mediaRes.data.content;
+        const favoritesData = favoritesRes.data;
+
+        if (favoritesData.success) {
+          mediaData.isFavorite = true;
+          mediaData.favoriteId = favoritesData.favorite.id;
+        } else {
+          mediaData.isFavorite = false;
+        }
+        setMedia(mediaData);
       } catch (error: any) {
-        if (error.message.includes('404')) {
+        if (error.response?.status === 404) {
           setMedia({});
+        } else {
+          console.error('Error fetching media details:', error);
         }
       } finally {
         setIsLoading(false);
       }
-    }
+    };
     getMedia();
-  }, [contentType, id])
+    console.log('Media:', media);
+  }, [contentType, id]);
 
-  // console.log("media", media);
-
-  // console.log("trailer", trailer);
-
-  // console.log("similar", similarMedia[0]);
+  const toggleFavorite = async (media: Media) => {
+    try {
+      if (media.isFavorite) {
+        await axios.delete(`/api/v1/users/favorites/${media.favoriteId}`);
+        media.isFavorite = false;
+        delete media.favoriteId;
+        toast.success("Removed from favorites");
+      } else {
+        const res = await axios.post(`/api/v1/users/favorites`, {
+          mediaId: media.id,
+          mediaType: contentType,
+        });
+        media.isFavorite = true;
+        media.favoriteId = res.data.favorite.id;
+        toast.success("Added to favorites");
+      }
+      setMedia({ ...media });
+    } catch (error: any) {
+      toast.error("Failed to update favorites");
+    }
+  }
 
   const handleNext = () => {
     if (currentTrailerIndex < trailers.length - 1) setCurrentTrailerIndex(currentTrailerIndex + 1);
@@ -191,6 +225,27 @@ const WatchPage = () => {
               )}{" "}
             </p>
             <p className='mt-4 text-lg'>{media?.overview}</p>
+            <div className='mt-4'>
+              <h3 className='text-2xl font-bold'>Genres</h3>
+              <div className='flex gap-2 mt-2'>
+                {media?.genres?.map((genre: any) => (
+                  <span
+                    key={genre.id}
+                    className='bg-gray-800 px-2 py-1 rounded-md text-sm'
+                  >
+                    {genre.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className='mt-4'>
+              <button
+                className={media.isFavorite ? 'bg-red-600 text-white py-2 px-4 rounded' : 'bg-gray-500 text-white py-2 px-4 rounded'}
+                onClick={() => toggleFavorite(media)}
+              >
+                Toggle Favorite
+              </button>
+            </div>
           </div>
           <img
             src={ORIGINAL_IMG_BASE_URL + media?.poster_path}

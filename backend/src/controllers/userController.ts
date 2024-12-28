@@ -30,7 +30,7 @@ export const getProfile = catchError(async (req, res) => {
 });
 
 export const updateProfile = catchError(async (req, res) => {
-  const currentUser = req.userId;
+const currentUser = req.userId;
   const { username, password } = req.body;
 
   const user = await User.findById(currentUser);
@@ -55,19 +55,27 @@ export const updateProfile = catchError(async (req, res) => {
 export const getFavorites = catchError(async (req, res) => {
   const currentUser = req.userId;
 
-  const favorites = await Favorite.find({ user: currentUser }).populate(
-    "mediaId"
-  );
-
-  // if (favorites.length === 0) {
-  //   return res
-  //     .status(NOT_FOUND)
-  //     .json({ success: false, message: "No favorites found" });
-  // }
+  const favorites = await Favorite.find({ user: currentUser });
 
   return res.status(OK).json({
     success: true,
     favorites,
+  });
+});
+
+export const getFavorite = catchError(async (req, res) => {
+  const currentUser = req.userId;
+  const { mediaId, mediaType } = req.query;
+
+  const favorite = await Favorite.findOne({
+    user: currentUser,
+    mediaId,
+    mediaType,
+  });
+
+  return res.status(OK).json({
+    success: favorite ? true : false,
+    favorite,
   });
 });
 
@@ -88,9 +96,6 @@ export const addFavorite = catchError(async (req, res) => {
     });
   }
 
-  console.log("mediaId", mediaId);
-  console.log("mediaType", mediaType);
-
   let mediaData;
   try {
     mediaData = await tmdbApi.mediaDetail({ mediaId, mediaType });
@@ -101,8 +106,15 @@ export const addFavorite = catchError(async (req, res) => {
     });
   }
 
-  const { original_title, original_name, backdrop_path, poster_path, genres, title, name } =
-    mediaData;
+  const {
+    original_title,
+    original_name,
+    backdrop_path,
+    poster_path,
+    genres,
+    title,
+    name,
+  } = mediaData;
 
   const mediaTitle = original_title || original_name || title || name;
 
@@ -155,7 +167,6 @@ export const addFavorite = catchError(async (req, res) => {
       relationship: "FAVORITED",
     });
   } catch (error) {
-    console.error("Error in Neo4j operations:", error);
     return res.status(INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Failed to update relationships in Neo4j",
@@ -180,8 +191,6 @@ export const deleteFavorite = catchError(async (req, res) => {
       message: "Favorite not found",
     });
   }
-
-  console.log("favorite", favorite);
 
   await neo4jClient.deleteRelationship({
     startLabel: "User",

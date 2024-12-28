@@ -60,7 +60,7 @@ export default function MediaSlider({ category }: { category: string }) {
     const getContent = async () => {
       try {
         const resContent = await axios.get(
-          `/api/v1/${contentType}/${category}?page=1`
+          `/api/v1/${contentType}/${category}?page=${Math.random() * 10}`
         );
         const content = resContent.data.content;
 
