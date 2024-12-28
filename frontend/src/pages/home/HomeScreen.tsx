@@ -22,7 +22,7 @@ export default function HomeScreen() {
   return (
     <>
       <div className="relative h-screen text-white ">
-        <Navbar></Navbar>
+        <Navbar />
 
         {imgLoading && (
           <div className="absolute top-0 left-0 w-full h-full bg-black/70 flex items-center -z-10 shimmer" />
@@ -42,10 +42,12 @@ export default function HomeScreen() {
             </div>
 
             <div className="flex mt-8">
-              <Link to={`/watch/${trending?.id}`} className='bg-white hover:bg-white/80 text-black font-bold py-2 px-4 rounded mr-4 flex items-center'>
-                <Play className="mr-2 size-6 fill-black" />
-                Play
-              </Link>
+              <button onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })} className="mr-4">
+                <Link to={`/watch/${trending?.id}`} className='bg-white hover:bg-white/80 text-black font-bold py-2 px-4 rounded mr-4 flex items-center'>
+                  <Play className="mr-2 size-6 fill-black" />
+                  Play
+                </Link>
+              </button>
 
               <Link to={`/watch/${trending?.id}`} className="bg-gray-500/70 hover:bg-gray-500 text-white py-2 px-4 rounded flex items-center">
                 <Info className=" mr-2 size-6 " />

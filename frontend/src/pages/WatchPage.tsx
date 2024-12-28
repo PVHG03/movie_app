@@ -210,8 +210,7 @@ const WatchPage = () => {
 
         {/* movie details */}
         <div
-          className='flex flex-col md:flex-row items-center justify-between gap-20 
-				max-w-6xl mx-auto'
+          className='flex flex-col md:flex-row items-center justify-between gap-20 max-w-6xl mx-auto'
         >
           <div className='mb-4 md:mb-0'>
             <h2 className='text-5xl font-bold text-balance'>{media?.title || media?.name}</h2>
@@ -243,7 +242,19 @@ const WatchPage = () => {
                 className={media.isFavorite ? 'bg-red-600 text-white py-2 px-4 rounded' : 'bg-gray-500 text-white py-2 px-4 rounded'}
                 onClick={() => toggleFavorite(media)}
               >
-                Toggle Favorite
+                Favorite
+              </button>
+              <button
+                className='bg-gray-500 text-white py-2 px-4 rounded mx-5'
+                onClick={() => {
+                  const reviewSection = document.getElementById('review-section');
+                  if (reviewSection) {
+                    document.getElementById('review')?.focus();
+                    reviewSection.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+              >
+                Review Section
               </button>
             </div>
           </div>
@@ -289,7 +300,7 @@ const WatchPage = () => {
           </div>
         )}
 
-        <ReviewSection mediaId={id as string} mediaType={contentType} />
+        <ReviewSection mediaId={id as string} mediaType={contentType}/>
       </div>
     </div>
   );

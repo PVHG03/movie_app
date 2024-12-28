@@ -97,7 +97,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ mediaId, mediaType }) => 
   };
 
   return (
-    <div className="mt-8">
+    <div id='review-section' className="mt-8">
       <h3 className="text-3xl font-bold mb-4">Reviews</h3>
 
       {user ? (

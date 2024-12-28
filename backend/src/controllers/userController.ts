@@ -116,7 +116,7 @@ export const addFavorite = catchError(async (req, res) => {
     name,
   } = mediaData;
 
-  const mediaTitle = original_title || original_name || title || name;
+  const mediaTitle = title || name || original_title || original_name;
 
   const favorite = new Favorite({
     user: currentUser,
